@@ -5,16 +5,21 @@ import (
 	"io/ioutil"
 	"os"
 
-	nubankControllers "github.com/edenriquez/nubank-authorizer/controllers"
+	nubankControllers "github.com/edenriquez/nubank-challenge/controllers"
+	nubankLogger "github.com/edenriquez/nubank-challenge/loggers"
+	nubankModel "github.com/edenriquez/nubank-challenge/models"
 )
 
 func main() {
 	data, _ := ioutil.ReadAll(os.Stdin)
-	accounts, err := nubankControllers.GenerateModel(data)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(len(accounts.Account))
-	fmt.Println(len(accounts.Account[0].Transaction))
+	accounts, transactions, errorList := nubankControllers.GenerateModel(data)
+	nubankLogger.LogError(errorList...)
+	operations := nubankControllers.AuthorizeTransactions(accounts, transactions)
+	printOperations(operations...)
+}
 
+func printOperations(o ...nubankModel.Operations) {
+	for _, operation := range o {
+		fmt.Println(operation)
+	}
 }
