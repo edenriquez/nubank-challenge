@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	constants "github.com/edenriquez/nubank-challenge/config/constants"
@@ -14,10 +15,12 @@ var operations []nubankModel.Operations
 var account []nubankModel.Account
 var transactions []nubankModel.Transaction
 var listOfErrors []error
+var accountViolation nubankModel.Violation
 
 // GenerateModel cast inconming json string into AccountList struct
 func GenerateModel(data []byte) ([]nubankModel.Account, []nubankModel.Transaction, []error) {
 	lines = parseLines(data)
+	fmt.Println(lines)
 	for _, line := range lines {
 		currentLine := nubankModel.InputJSON{}
 		appendError(json.Unmarshal([]byte(line), &currentLine))
@@ -32,8 +35,15 @@ func GenerateModel(data []byte) ([]nubankModel.Account, []nubankModel.Transactio
 
 // AuthorizeTransactions should validate transactions for given account
 func AuthorizeTransactions(accounts []nubankModel.Account, transactions []nubankModel.Transaction) []nubankModel.Operations {
-	globalAccount = getAssociatedAccount(accounts...)
+	globalAccount, accountViolation = getAssociatedAccount(accounts...)
 	hasConstraints := false
+	if len(accountViolation.Reason) > 0 {
+		return []nubankModel.Operations{
+			nubankModel.Operations{
+				Violation: accountViolation,
+			},
+		}
+	}
 	for _, transaction := range transactions {
 		violation := chargeTransaction(transaction)
 		if len(violation.Reason) > 0 {
@@ -61,8 +71,13 @@ func chargeTransaction(transaction nubankModel.Transaction) nubankModel.Violatio
 	return nubankModel.Violation{}
 }
 
-func getAssociatedAccount(accounts ...nubankModel.Account) nubankModel.Account {
-	return accounts[0]
+func getAssociatedAccount(accounts ...nubankModel.Account) (nubankModel.Account, nubankModel.Violation) {
+	if len(account) > 1 {
+		return nubankModel.Account{}, nubankModel.Violation{
+			Reason: constants.AccountAlreadyInitialized,
+		}
+	}
+	return accounts[0], nubankModel.Violation{}
 }
 
 func parseLines(data []byte) []string {
