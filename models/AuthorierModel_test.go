@@ -112,3 +112,14 @@ func TestIsTransactionFalse(t *testing.T) {
 	in.Transaction.Mock(10, "", "01/01/01")
 	assert.False(t, in.IsTransaction())
 }
+
+func TestAccountAlreadyCreated(t *testing.T) {
+	account := &Account{}
+	account.Mock()
+	assert.True(t, account.IsAlreadyCreated())
+}
+
+func TestAccountNotCreated(t *testing.T) {
+	account := &Account{}
+	assert.False(t, account.IsAlreadyCreated())
+}
