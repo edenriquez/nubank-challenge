@@ -1,26 +1,32 @@
 package controllers
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-type testCases struct {
-	input []byte
+func TestProcessStreamToEntity(t *testing.T) {
+	objectWithNormalBehaviour := []byte(`
+		{"account": {"active-card": true, "available-limit": 100}}
+		{"transaction": {"merchant": "Burger King", "amount": 20, "time":"2019-02-13T10:00:00.000Z"}}
+		{"transaction": {"merchant": "Habbib's", "amount": 90, "time": "2019-02-13T11:00:00.000Z"}}`)
+
+	acc, err := ProcessStreamToEntity(objectWithNormalBehaviour)
+	assert.NotNil(t, acc.AccountDetails.ActiveCard)
+	assert.NotNil(t, acc.AccountDetails.AvailableLimit)
+	assert.Len(t, acc.Transactions, 2)
+	assert.Len(t, err, 0)
 }
 
-func TestGenerateModel(t *testing.T) {
-	testNormalBehaviour := &testCases{}
-	testNormalBehaviour.input = []byte(`{"account": {"active-card": true, "available-limit": 100}}
-	{"transaction": {"merchant": "Burger King", "amount": 20, "time":"2019-02-13T10:00:00.000Z"}}
-	{"transaction": {"merchant": "Habbib's", "amount": 90, "time": "2019-02-13T11:00:00.000Z"}}`)
+func TestProcessStreamToEntityWithMalformedInput(t *testing.T) {
+	objectWithInvalidStructure := []byte(`
+		{"account": {"active-card": true, "available-limit": 100}}
+		{"transaction": {"merchant": "Burger King", "amount": 20, "time":"2019-02-13T10:00:00.000Z"}}
+		{"transaction": {"merchant": "Habbib's", "amount": 90, "time": "2019-02-13T11:00:00.000Z"}}
+		}`)
 
-	acc, trans, err := GenerateModel(testNormalBehaviour.input)
-	fmt.Println(acc, trans)
-	assert.Len(t, acc, 1)
-	assert.Len(t, trans, 2)
-	assert.Len(t, err, 0)
-
+	_, err := ProcessStreamToEntity(objectWithInvalidStructure)
+	assert.Len(t, err, 1)
+	assert.Error(t, err[0], `invalid character '}' looking for beginning of value`)
 }
