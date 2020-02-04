@@ -16,6 +16,7 @@ func ProcessStreamToEntity(lines []string) (nubankModels.Account, []error) {
 		currentLine := &nubankModels.InputJSON{}
 		hasError := currentLine.ToStruct(line)
 		utils.AppendError(hasError, &parseErrorList)
+
 		if currentLine.AccountIsValid() {
 			if account.IsAlreadyCreated() {
 				account.AppendValidation(constants.AccountAlreadyInitialized)
@@ -26,6 +27,15 @@ func ProcessStreamToEntity(lines []string) (nubankModels.Account, []error) {
 			nubankLogger.LogAction(account, "creation")
 		} else if currentLine.IsTransaction() {
 			account.Transactions = append(account.Transactions, currentLine.Transaction)
+			if !account.IsAlreadyCreated() {
+				account.AppendValidation(constants.AccountIsNotInitialized)
+				nubankLogger.LogAction(account, "transaction")
+				break
+			}
+		} else if !currentLine.AccountIsValid() {
+			account.AppendValidation(constants.AccountCardIsNotActive)
+			nubankLogger.LogAction(account, "creation")
+			break
 		}
 	}
 	return account, parseErrorList

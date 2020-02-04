@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -55,4 +56,11 @@ func TestParseLinesWithBreaksInBetween(t *testing.T) {
 	assert.Equal(t, `line1`, res[0])
 	assert.Equal(t, `line2`, res[1])
 	assert.Equal(t, `line3`, res[2])
+}
+
+func TestAppendError(t *testing.T) {
+	list := []error{}
+	err := errors.New("example")
+	AppendError(err, &list)
+	assert.Equal(t, list[0].Error(), err.Error())
 }

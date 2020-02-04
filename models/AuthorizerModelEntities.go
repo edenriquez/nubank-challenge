@@ -1,6 +1,6 @@
 package models
 
-// InputJSON represents the input data structure
+// InputJSON represents the structure to cast input data
 type InputJSON struct {
 	Account     `json:"account"`
 	Transaction `json:"transaction"`
@@ -8,7 +8,7 @@ type InputJSON struct {
 
 // OutputJSON represents the ouput data structure
 // with Account and Violations objects
-// Transactions is not required in the output so is avoided with - tag
+// Transactions is not required in the output so is invalidated with - tag
 type OutputJSON struct {
 	Account `json:"account"`
 }

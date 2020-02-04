@@ -9,6 +9,8 @@ import (
 	"gopkg.in/validator.v2"
 )
 
+const layout = "2006-01-02T15:04:05.000Z"
+
 // ChargeTransaction method that validates and updates account available limit
 func (a *Account) ChargeTransaction(transaction Transaction) string {
 	updatedAccount := &Account{
@@ -18,6 +20,13 @@ func (a *Account) ChargeTransaction(transaction Transaction) string {
 	if err := validator.Validate(updatedAccount); err != nil {
 		return constants.InsuficientLimitError
 	}
+	if a.hasDuplicateTransaction(transaction) {
+		return constants.DoubleTransaction
+	}
+	if a.hasHighFrequency(transaction) {
+		return constants.TransactionHighFrequency
+	}
+
 	a.AccountDetails = updatedAccount.AccountDetails
 	return ""
 }
@@ -44,6 +53,41 @@ func (o *OutputJSON) ToString() string {
 // ToStruct should cast input string line to struct
 func (i *InputJSON) ToStruct(line string) error {
 	return json.Unmarshal([]byte(line), &i)
+}
+
+func (a *Account) hasHighFrequency(incomingTransaction Transaction) bool {
+	highFrequencyCounter := 1
+	for _, accountTransaction := range a.Transactions {
+		accountTime, _ := time.Parse(layout, accountTransaction.Time)
+		incomingTime, _ := time.Parse(layout, incomingTransaction.Time)
+		twoMinAgo := accountTime.Add(time.Duration(-2) * time.Minute)
+		twoMinAfter := accountTime.Add(time.Duration(2) * time.Minute)
+		isInBetweenRange := incomingTime.Before(twoMinAfter) && incomingTime.After(twoMinAgo)
+		if isInBetweenRange {
+			highFrequencyCounter++
+		}
+	}
+	return highFrequencyCounter > 3
+}
+
+func (a *Account) hasDuplicateTransaction(incomingTransaction Transaction) bool {
+	duplicate := false
+	for _, accountTransaction := range a.Transactions {
+		hasSameMerchant := accountTransaction.Merchant == incomingTransaction.Merchant
+		hasSameAmount := accountTransaction.Amount == incomingTransaction.Amount
+		differentTime := accountTransaction.Time != incomingTransaction.Time
+		if hasSameAmount && hasSameMerchant && differentTime {
+			accountTime, _ := time.Parse(layout, accountTransaction.Time)
+			incomingTime, _ := time.Parse(layout, incomingTransaction.Time)
+			twoMinAgo := accountTime.Add(time.Duration(-2) * time.Minute)
+			twoMinAfter := accountTime.Add(time.Duration(2) * time.Minute)
+			isInBetweenRange := incomingTime.Before(twoMinAfter) && incomingTime.After(twoMinAgo)
+			if isInBetweenRange {
+				duplicate = true
+			}
+		}
+	}
+	return duplicate
 }
 
 // AccountIsValid should help validating if account is already created
