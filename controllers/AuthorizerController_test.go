@@ -2,6 +2,9 @@ package controllers
 
 import (
 	"testing"
+	"time"
+
+	nubankModels "github.com/edenriquez/nubank-challenge/models"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -29,4 +32,18 @@ func TestProcessStreamToEntityWithMalformedInput(t *testing.T) {
 	_, err := ProcessStreamToEntity(objectWithInvalidStructure)
 	assert.Len(t, err, 1)
 	assert.Error(t, err[0], `invalid character '}' looking for beginning of value`)
+}
+
+func TestProcessEntityTransactions(t *testing.T) {
+	availableLimit := 100
+	account := &nubankModels.Account{}
+	tr1 := nubankModels.Transaction{}
+	account.Mock()
+	tr1.Mock(10, "merchant", time.Now().UTC().String())
+	account.AccountDetails.AvailableLimit = availableLimit
+	account.Transactions = []nubankModels.Transaction{
+		tr1,
+	}
+	ProcessEntityTransactions(account)
+	assert.Equal(t, account.AccountDetails.AvailableLimit, availableLimit-tr1.Amount)
 }
